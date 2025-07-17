@@ -19,7 +19,16 @@ from core.certainty_analyzer import CertaintyAnalyzer
 from core.focus_group import FocusGroupSystem
 from core.memory_manager import MemoryManager
 from core.tool_manager import ToolManager
-from ui.components import render_sidebar, render_chat_message, render_focus_ring
+from ui.components import (
+    render_sidebar,
+    render_chat_message,
+    render_focus_ring,
+    render_task_contextualization,
+    render_deep_research,
+    render_personas_manager,
+    render_gauntlet_system,
+    render_focus_group_results,
+)
 from ui.styles import load_custom_css
 
 # Page configuration
