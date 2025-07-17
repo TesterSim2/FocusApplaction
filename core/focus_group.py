@@ -1,10 +1,11 @@
 """Focus Group (Roundtable) System Implementation"""
 
 import asyncio
+import random
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-import random
 from concurrent.futures import ThreadPoolExecutor
+from .ai_orchestrator import AIOrchestrator
 
 @dataclass
 class Participant:
@@ -28,6 +29,7 @@ class FocusGroupSystem:
         self.overseer = Overseer()
         self.judge = Judge()
         self.participants = []
+        self.orchestrator = AIOrchestrator()
         
     def run_session(self, query: str, participants: int = 5, 
                    overseer_mode: str = 'balanced', 
@@ -103,24 +105,31 @@ class FocusGroupSystem:
             'overseer_notes': self.overseer.review_round(responses)
         }
     
-    def _generate_participant_response(self, participant: Participant, 
-                                     query: str, previous: Optional[str], 
-                                     round_num: int) -> Dict:
+    def _generate_participant_response(
+        self,
+        participant: Participant,
+        query: str,
+        previous: Optional[str],
+        round_num: int,
+    ) -> Dict:
         """Generate a single participant's response"""
-        # Simulate different thinking styles based on role
-        perspective = f"As a {participant.role} thinker with expertise in {', '.join(participant.expertise)}"
-        
+        perspective = (
+            f"As a {participant.role} thinker with expertise in {', '.join(participant.expertise)}"
+        )
+
         if previous:
-            prompt = f"{perspective}, reviewing the previous response: '{previous[:200]}...', my analysis of '{query}' is:"
+            prompt = (
+                f"{perspective}, reviewing the previous response: '{previous[:200]}...', "
+                f"my analysis of '{query}' is:"
+            )
         else:
             prompt = f"{perspective}, my initial thoughts on '{query}' are:"
-        
-        # Simulate response (in production, this would call actual AI)
-        response = f"[{participant.id}] {prompt} [Simulated response with temperature {participant.temperature}]"
-        
+
+        ai_response = self.orchestrator.process(prompt, mode="creative")
+
         return {
-            'content': response,
-            'confidence': random.uniform(0.6, 0.95),
+            'content': ai_response['content'],
+            'confidence': ai_response.get('confidence', random.uniform(0.6, 0.95)),
             'key_points': [f"Point from {participant.id}"],
             'agreements': [],
             'disagreements': []
