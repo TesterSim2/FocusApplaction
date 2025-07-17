@@ -5,7 +5,6 @@ import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
-import openai
 import requests
 import json
 
@@ -22,8 +21,7 @@ class AIOrchestrator:
     
     def __init__(self):
         self.models = {
-            'openai': None,  # Initialize with API key
-            'anthropic': None,
+            'gemini': None,  # Initialize with API key
             'local': None
         }
         self.conversation_history = []
@@ -101,36 +99,59 @@ Thinking Process:
         )
 
     def _process_standard(self, prompt: str, system_prompt: str) -> str:
-        """Process prompt using the OpenAI API"""
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": prompt},
-        ]
-        api_key = os.getenv("OPENAI_API_KEY")
+        """Process prompt using the Google Gemini API"""
+        api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            return "OPENAI_API_KEY not configured"
-        openai.api_key = api_key
+            return "GEMINI_API_KEY not configured"
+
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        )
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_prompt}\n\n{prompt}"}],
+                }
+            ]
+        }
+
         try:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=messages,
-            )
-            return response.choices[0].message["content"].strip()
+            resp = requests.post(f"{url}?key={api_key}", headers=headers, json=data, timeout=20)
+            resp.raise_for_status()
+            result = resp.json()
+            candidates = result.get("candidates", [])
+            if candidates:
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+                if parts:
+                    return parts[0].get("text", "").strip()
+            return "No response"
         except Exception as exc:
-            return f"OpenAI API error: {exc}"
+            return f"Gemini API error: {exc}"
 
     def _search_tool(self, prompt: str) -> str:
-        """Simple web search using DuckDuckGo"""
+        """Search the web using Google Custom Search"""
+        api_key = os.getenv("GOOGLE_API_KEY")
+        cse_id = os.getenv("GOOGLE_CSE_ID")
+        if not api_key or not cse_id:
+            return "Google search not configured"
+
         try:
             resp = requests.get(
-                "https://duckduckgo.com/?q={}&format=json&no_redirect=1&no_html=1".format(
-                    requests.utils.quote(prompt)
-                )
+                "https://www.googleapis.com/customsearch/v1",
+                params={"q": prompt, "key": api_key, "cx": cse_id},
+                timeout=10,
             )
             data = resp.json()
-            topics = data.get("RelatedTopics", [])
-            if topics:
-                return topics[0].get("Text", "")
+            items = data.get("items", [])
+            if items:
+                first = items[0]
+                title = first.get("title", "")
+                snippet = first.get("snippet", "")
+                link = first.get("link", "")
+                return f"{title}: {snippet} ({link})"
             return "No results found"
         except Exception as exc:
             return f"Search error: {exc}"

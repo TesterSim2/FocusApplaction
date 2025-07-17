@@ -40,8 +40,9 @@ python -m spacy download en_core_web_sm
 
 1. Create a `.env` file in the root directory:
 ```
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
+GEMINI_API_KEY=your_gemini_api_key
+GOOGLE_API_KEY=your_google_api_key
+GOOGLE_CSE_ID=your_custom_search_engine_id
 ```
 
 2. Configure settings in the app or via the Settings tab
